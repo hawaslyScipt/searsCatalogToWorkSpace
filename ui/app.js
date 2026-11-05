@@ -12,9 +12,10 @@
   };
 
   let busy = false;
-  /** @type {Record<string, number>} */
-  let lastBrandCounts = {};
-  let lastCatalogRowCount = null;
+  /** @type {Record<string, number|null>} */
+  let splitCounts = {};
+  /** @type {number|null} */
+  let splitTotal = null;
   let lastStatus = null;
 
   function appendLog(message, level = "info") {
@@ -53,47 +54,40 @@
     return n.toLocaleString("en-US");
   }
 
-  function rememberCountsFromResults(results, total) {
-    if (!Array.isArray(results)) return;
-    for (const r of results) {
-      if (r?.brand && typeof r.count === "number") {
-        lastBrandCounts[r.brand] = r.count;
-      }
-    }
-    if (typeof total === "number") lastCatalogRowCount = total;
+  function clearSplitCounts() {
+    splitCounts = {};
+    splitTotal = null;
   }
 
-  function rememberCountsFromStatus(status) {
-    if (!status) return;
-    if (typeof status.catalogRowCount === "number") {
-      lastCatalogRowCount = status.catalogRowCount;
+  /** Apply counts from split API result.results (same source as log lines). */
+  function applySplitCounts(splitResult) {
+    if (!splitResult || !Array.isArray(splitResult.results)) return false;
+    const next = {};
+    for (const r of splitResult.results) {
+      if (r?.brand && typeof r.count === "number") {
+        next[r.brand] = r.count;
+      }
     }
-    if (status.counts?.brands && typeof status.counts.brands === "object") {
-      lastBrandCounts = { ...lastBrandCounts, ...status.counts.brands };
-    }
-    for (const b of status.brands || []) {
-      if (typeof b.count === "number") lastBrandCounts[b.name] = b.count;
-    }
+    splitCounts = next;
+    splitTotal = typeof splitResult.total === "number" ? splitResult.total : null;
+    return true;
   }
 
   function brandCount(name) {
-    if (typeof lastBrandCounts[name] === "number") return lastBrandCounts[name];
+    if (Object.prototype.hasOwnProperty.call(splitCounts, name)) {
+      const n = splitCounts[name];
+      return typeof n === "number" ? n : null;
+    }
     return null;
   }
 
   function renderCards(status) {
     lastStatus = status || lastStatus;
     const s = lastStatus || {};
-    rememberCountsFromStatus(s);
-
     const catalog = s.catalog;
-    const catalogCountNum =
-      typeof lastCatalogRowCount === "number"
-        ? lastCatalogRowCount
-        : typeof s.catalogRowCount === "number"
-          ? s.catalogRowCount
-          : null;
-    const catalogCount = formatCount(catalogCountNum);
+
+    // Full catalog total only from this session's split — never status.catalogRowCount
+    const catalogCount = formatCount(splitTotal);
 
     const items = [
       {
@@ -150,6 +144,7 @@
       document.getElementById("statDrive").textContent =
         data.drivePathHint || "—";
 
+      // Updates file sizes / Ready state only — does NOT replace session splitCounts
       renderCards(data);
       setBusy(data.busy, data.currentJob);
       return data;
@@ -166,6 +161,11 @@
 
     setBusy(true, action);
     appendLog(`→ Starting ${action}…`, "ok");
+
+    if (action === "split" || action === "run-all") {
+      clearSplitCounts();
+      renderCards(lastStatus);
+    }
 
     try {
       const res = await fetch(url, {
@@ -189,19 +189,11 @@
       if (action === "split" || action === "run-all") {
         const splitResult =
           action === "split" ? data.result : data.result?.split;
-        const results = splitResult?.results;
-        if (Array.isArray(results)) {
-          rememberCountsFromResults(results, splitResult?.total);
-          for (const r of results) {
+        if (applySplitCounts(splitResult)) {
+          for (const r of splitResult.results) {
             appendLog(`  ${r.brand}: ${r.count} rows`);
           }
-          // Update cards immediately with brand-wise counts
-          renderCards(lastStatus || { brands: results.map((r) => ({
-            name: r.brand,
-            exists: true,
-            sizeMb: 0,
-            size: 0,
-          })) });
+          renderCards(lastStatus);
         }
       }
     } catch (err) {
@@ -237,6 +229,10 @@
         const data = JSON.parse(ev.data);
         if (data.status === "started") {
           setBusy(true, data.job);
+          if (data.job === "split" || data.job === "run-all") {
+            clearSplitCounts();
+            renderCards(lastStatus);
+          }
         } else if (data.status === "done" || data.status === "error") {
           await refreshStatus();
         }
