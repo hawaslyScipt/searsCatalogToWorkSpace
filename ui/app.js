@@ -12,6 +12,10 @@
   };
 
   let busy = false;
+  /** @type {Record<string, number>} */
+  let lastBrandCounts = {};
+  let lastCatalogRowCount = null;
+  let lastStatus = null;
 
   function appendLog(message, level = "info") {
     const line = document.createElement("div");
@@ -44,23 +48,75 @@
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
 
+  function formatCount(n) {
+    if (typeof n !== "number" || Number.isNaN(n)) return null;
+    return n.toLocaleString("en-US");
+  }
+
+  function rememberCountsFromResults(results, total) {
+    if (!Array.isArray(results)) return;
+    for (const r of results) {
+      if (r?.brand && typeof r.count === "number") {
+        lastBrandCounts[r.brand] = r.count;
+      }
+    }
+    if (typeof total === "number") lastCatalogRowCount = total;
+  }
+
+  function rememberCountsFromStatus(status) {
+    if (!status) return;
+    if (typeof status.catalogRowCount === "number") {
+      lastCatalogRowCount = status.catalogRowCount;
+    }
+    if (status.counts?.brands && typeof status.counts.brands === "object") {
+      lastBrandCounts = { ...lastBrandCounts, ...status.counts.brands };
+    }
+    for (const b of status.brands || []) {
+      if (typeof b.count === "number") lastBrandCounts[b.name] = b.count;
+    }
+  }
+
+  function brandCount(name) {
+    if (typeof lastBrandCounts[name] === "number") return lastBrandCounts[name];
+    return null;
+  }
+
   function renderCards(status) {
-    const catalog = status.catalog;
+    lastStatus = status || lastStatus;
+    const s = lastStatus || {};
+    rememberCountsFromStatus(s);
+
+    const catalog = s.catalog;
+    const catalogCountNum =
+      typeof lastCatalogRowCount === "number"
+        ? lastCatalogRowCount
+        : typeof s.catalogRowCount === "number"
+          ? s.catalogRowCount
+          : null;
+    const catalogCount = formatCount(catalogCountNum);
+
     const items = [
       {
         label: "Full catalog",
         title: catalog?.name || "Not downloaded",
+        countNum: catalogCount,
         meta: catalog
           ? formatSize(catalog.sizeMb ?? 0, catalog.size ?? 0)
           : "Waiting for download",
         ready: Boolean(catalog),
       },
-      ...(status.brands || []).map((b) => ({
-        label: "Brand sheet",
-        title: b.name,
-        meta: b.exists ? formatSize(b.sizeMb ?? 0, b.size ?? 0) : "Not built yet",
-        ready: b.exists,
-      })),
+      ...(s.brands || []).map((b) => {
+        const n = brandCount(b.name);
+        return {
+          label: "Brand sheet",
+          title: b.name,
+          countNum: formatCount(n),
+          meta: b.exists
+            ? formatSize(b.sizeMb ?? 0, b.size ?? 0)
+            : "Not built yet",
+          ready: b.exists,
+        };
+      }),
     ];
 
     brandCards.innerHTML = items
@@ -69,6 +125,10 @@
       <article class="card ${item.ready ? "" : "missing"}">
         <p class="card-label">${item.label}</p>
         <h3 class="card-title">${item.title}</h3>
+        <p class="card-count">
+          <span class="count-num">${item.countNum ?? "—"}</span>
+          <span class="count-unit">rows</span>
+        </p>
         <p class="card-meta">${item.meta}</p>
         <span class="pill ${item.ready ? "ready" : "missing"}">
           ${item.ready ? "Ready" : "Missing"}
@@ -127,11 +187,21 @@
       appendLog(`✓ ${action} finished`, "ok");
 
       if (action === "split" || action === "run-all") {
-        const results = data.result?.results || data.result?.split?.results;
+        const splitResult =
+          action === "split" ? data.result : data.result?.split;
+        const results = splitResult?.results;
         if (Array.isArray(results)) {
+          rememberCountsFromResults(results, splitResult?.total);
           for (const r of results) {
             appendLog(`  ${r.brand}: ${r.count} rows`);
           }
+          // Update cards immediately with brand-wise counts
+          renderCards(lastStatus || { brands: results.map((r) => ({
+            name: r.brand,
+            exists: true,
+            sizeMb: 0,
+            size: 0,
+          })) });
         }
       }
     } catch (err) {

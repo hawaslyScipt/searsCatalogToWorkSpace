@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Upload into Google Drive:
- * Listing Verifier Folder / searsCatalog Data / <date> /
+ * searsCatalog Data (FolderId from .env) / <date> /
  *   - full downloaded catalog sheet (e.g. Published Items.csv)
  *   - Homelegance / FOA / Acme / Giga Buyer / Others brand sheets
  *
- * FolderId in .env must point to "Listing Verifier Folder".
+ * FolderId in .env must point to "searsCatalog Data".
  *
  * Usage:
  *   npm run upload:workspace
@@ -23,8 +23,6 @@ import {
   runDateFolderName,
 } from "./lib/shared.mjs";
 
-const SEARS_CATALOG_DATA_FOLDER = "searsCatalog Data";
-
 function argValue(flag) {
   const i = process.argv.indexOf(flag);
   return i >= 0 ? String(process.argv[i + 1] || "").trim() : "";
@@ -40,11 +38,11 @@ function driveClient() {
   return google.drive({ version: "v3", auth });
 }
 
-function listingVerifierFolderId() {
+function searsCatalogDataFolderId() {
   const id = parseDriveFolderId(process.env.FolderId);
   if (!id) {
     throw new Error(
-      'Missing or invalid FolderId in .env (must be "Listing Verifier Folder" Drive URL/ID)'
+      'Missing or invalid FolderId in .env (must be "searsCatalog Data" Drive URL/ID)'
     );
   }
   return id;
@@ -104,7 +102,6 @@ function findFullCatalogInDateDir(dayDir) {
     .map((e) => e.name)
     .filter((name) => /\.(csv|xlsx|xls)$/i.test(name));
 
-  // Prefer the Sears download name; otherwise any non-brand sheet in the date root
   const preferred = entries.find((n) => /^published items\./i.test(n));
   if (preferred) return path.join(dayDir, preferred);
 
@@ -156,19 +153,12 @@ export async function uploadToWorkspace({ dateName } = {}) {
   }
 
   const drive = driveClient();
-  const listingVerifierId = listingVerifierFolderId();
+  const searsCatalogDataId = searsCatalogDataFolderId();
 
-  console.log(`Listing Verifier Folder: ${listingVerifierId}`);
+  console.log(`searsCatalog Data (FolderId): ${searsCatalogDataId}`);
   console.log(`Uploading local folder: ${dayDir}`);
 
-  // Listing Verifier Folder -> searsCatalog Data -> date -> (full catalog + brands)
-  const searsCatalogDataId = await findOrCreateFolder(
-    drive,
-    SEARS_CATALOG_DATA_FOLDER,
-    listingVerifierId
-  );
-  console.log(`Inside: ${SEARS_CATALOG_DATA_FOLDER}`);
-
+  // searsCatalog Data -> date -> (full catalog + brands)
   const dateFolderId = await findOrCreateFolder(drive, day, searsCatalogDataId);
   console.log(`Date folder on Drive: ${day}`);
 
@@ -176,7 +166,6 @@ export async function uploadToWorkspace({ dateName } = {}) {
   console.log("Full catalog upload:");
   let catalogLocal = findFullCatalogInDateDir(dayDir);
   if (!catalogLocal) {
-    // Fallback: copy from output root if split hasn't placed it yet
     const rootCandidates = fs
       .readdirSync(OUTPUT_DIR, { withFileTypes: true })
       .filter((e) => e.isFile() && /\.(csv|xlsx|xls)$/i.test(e.name))
@@ -230,7 +219,7 @@ export async function uploadToWorkspace({ dateName } = {}) {
 
   console.log("");
   console.log(
-    `Done. Drive path: Listing Verifier Folder / ${SEARS_CATALOG_DATA_FOLDER} / ${day} / [full catalog + brand folders]`
+    `Done. Drive path: searsCatalog Data / ${day} / [full catalog + brand folders]`
   );
   return { dateName: day, dateFolderId, searsCatalogDataId };
 }

@@ -210,10 +210,37 @@ h1 {
 }
 
 .card .card-title {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.card .card-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--teal);
+  font-family: var(--mono);
+}
+
+.card .card-count .count-num {
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.card .card-count .count-unit {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.card.missing .card-count,
+.card.missing .card-count .count-num {
+  color: var(--slate);
 }
 
 .card .card-meta {

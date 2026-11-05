@@ -143,9 +143,23 @@ export function getStatusSnapshot() {
   const catalogInDate = fileInfo(findCatalogInDateDir(dayDir));
   const catalog = catalogInDate || catalogRoot;
 
+  let counts = null;
+  const countsPath = path.join(dayDir, "brand-counts.json");
+  if (fs.existsSync(countsPath)) {
+    try {
+      counts = JSON.parse(fs.readFileSync(countsPath, "utf8"));
+    } catch {
+      counts = null;
+    }
+  }
+
   const brands = UPLOAD_BRANDS.map((brand) => {
     const brandPath = path.join(dayDir, brand.name, brand.fileName);
     const info = fileInfo(brandPath);
+    const count =
+      counts?.brands && typeof counts.brands[brand.name] === "number"
+        ? counts.brands[brand.name]
+        : null;
     return {
       name: brand.name,
       fileName: brand.fileName,
@@ -153,6 +167,7 @@ export function getStatusSnapshot() {
       size: info?.size ?? 0,
       sizeMb: info?.sizeMb ?? 0,
       path: brandPath,
+      count,
     };
   });
 
@@ -164,11 +179,13 @@ export function getStatusSnapshot() {
     dayDir,
     dateFolderExists,
     sheetsExist,
-    drivePathHint: `Listing Verifier Folder / searsCatalog Data / ${dateName} / [full catalog + brand folders]`,
+    drivePathHint: `searsCatalog Data / ${dateName} / [full catalog + brand folders]`,
     catalog,
     catalogRoot,
     catalogInDate,
+    catalogRowCount: typeof counts?.total === "number" ? counts.total : null,
     brands,
+    counts,
     dateFolders: listDateFolders(),
   };
 }

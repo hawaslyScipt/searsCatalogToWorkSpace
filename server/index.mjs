@@ -32,8 +32,25 @@ app.use(express.static(UI_DIR));
 app.get("/api/status", (_req, res) => {
   try {
     const snap = getStatusSnapshot();
+    // Ensure brand-wise row counts are always present for UI cards
+    const brands = (snap.brands || []).map((b) => ({
+      ...b,
+      count:
+        typeof b.count === "number"
+          ? b.count
+          : typeof snap.counts?.brands?.[b.name] === "number"
+            ? snap.counts.brands[b.name]
+            : null,
+    }));
     res.json({
       ...snap,
+      brands,
+      catalogRowCount:
+        typeof snap.catalogRowCount === "number"
+          ? snap.catalogRowCount
+          : typeof snap.counts?.total === "number"
+            ? snap.counts.total
+            : null,
       busy: isBusy(),
       currentJob: getCurrentJob(),
     });

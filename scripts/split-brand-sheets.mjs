@@ -171,6 +171,19 @@ export async function splitBrandSheets({ catalogPath } = {}) {
   console.log(`Unmatched / other: ${othersCount}`);
   console.log(`Sheets ready under output/${dateName}/`);
 
+  // Persist counts for UI brand cards
+  const countsPayload = {
+    dateName,
+    updatedAt: new Date().toISOString(),
+    total,
+    matched,
+    others: othersCount,
+    brands: Object.fromEntries(results.map((r) => [r.brand, r.count])),
+  };
+  const countsPath = path.join(dayDir, "brand-counts.json");
+  fs.writeFileSync(countsPath, JSON.stringify(countsPayload, null, 2), "utf8");
+  console.log(`Counts saved: ${countsPath}`);
+
   return {
     dateName,
     dayDir,
@@ -180,6 +193,7 @@ export async function splitBrandSheets({ catalogPath } = {}) {
     others: othersCount,
     catalogPath: catalogInDateDir,
     catalogFileName,
+    counts: countsPayload,
   };
 }
 

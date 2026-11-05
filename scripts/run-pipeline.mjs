@@ -4,7 +4,7 @@
  *  1) Download Sears catalog (Playwright headed Chrome)
  *  2) Split into brand sheets under output/DD-MM-YYYY/
  *  3) Upload full catalog + brand sheets to
- *     Listing Verifier / searsCatalog Data / <date> /
+ *     searsCatalog Data (FolderId) / <date> /
  *
  * Usage:
  *   npm run catalog:workspace
