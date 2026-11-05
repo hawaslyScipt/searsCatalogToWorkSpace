@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sears Catalog Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="bg-glow" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="hero">
+        <p class="eyebrow">Local automation</p>
+        <h1>Sears Catalog Console</h1>
+        <p class="lede">
+          Download, filter into brand sheets, and upload to Google Drive Workspace —
+          with live logs.
+        </p>
+      </header>
+
+      <section class="status-strip" id="statusStrip" aria-live="polite">
+        <div class="stat">
+          <span class="label">Today</span>
+          <strong id="statDate">—</strong>
+        </div>
+        <div class="stat">
+          <span class="label">Catalog</span>
+          <strong id="statCatalog">—</strong>
+        </div>
+        <div class="stat wide">
+          <span class="label">Drive path</span>
+          <strong id="statDrive">—</strong>
+        </div>
+        <div class="stat job">
+          <span class="label">Job</span>
+          <strong id="statJob">Idle</strong>
+        </div>
+      </section>
+
+      <section class="actions" aria-label="Pipeline actions">
+        <button type="button" class="btn" data-action="download" id="btnDownload">
+          Download Catalog
+        </button>
+        <button type="button" class="btn" data-action="split" id="btnSplit">
+          Filter &amp; Build Sheets
+        </button>
+        <button type="button" class="btn" data-action="upload" id="btnUpload">
+          Upload to Workspace
+        </button>
+        <button type="button" class="btn primary" data-action="run-all" id="btnRunAll">
+          Run All
+        </button>
+      </section>
+
+      <section class="cards" id="brandCards" aria-label="Catalog and brand sheets"></section>
+
+      <section class="log-panel">
+        <div class="log-head">
+          <h2>Live log</h2>
+          <button type="button" class="ghost" id="btnClearLog">Clear</button>
+        </div>
+        <pre id="logView" class="log-view" aria-live="polite"></pre>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

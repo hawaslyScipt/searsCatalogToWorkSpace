@@ -1,0 +1,23 @@
+{
+  "name": "sears-catalog-to-workspaces",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "ui": "node server/index.mjs",
+    "download:catalog": "node scripts/download-catalog.mjs",
+    "split:brands": "node scripts/split-brand-sheets.mjs",
+    "upload:workspace": "node scripts/upload-to-workspace.mjs",
+    "catalog:workspace": "node scripts/run-pipeline.mjs"
+  },
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "googleapis": "^148.0.0",
+    "open": "^10.1.0",
+    "playwright": "^1.51.0"
+  }
+}
